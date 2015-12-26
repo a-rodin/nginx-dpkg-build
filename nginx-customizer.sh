@@ -14,6 +14,8 @@ while getopts "hp:s:r:b:o:c:n" opt; do
             echo "  -c <config>     - add config file or directory for installation into /etc/nginx"
             echo "  -n              - don't run dpkg-buildpackage"
             echo "  -h              - show this help"
+            echo "To run the script nginx build dependencies have to be installed. It could be done by running command"
+            echo "  sudo apt-get install build-dep nginx"
             exit 1
             ;;
         s)
