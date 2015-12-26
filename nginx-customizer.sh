@@ -9,7 +9,7 @@ while getopts "hp:s:r:b:o:c:n" opt; do
             echo "  -s <suffix>     - specify suffix added to the resulting packages (required)"
             echo "  -p <patch>      - add patch to the source tree"
             echo "  -r <root tree>  - add directory with root tree (containing e.g. usr and var dirs) to the package"
-            echo "  -b <build dir>  - directory for building (default is build)"
+            echo "  -b <build dir>  - directory for building (default is $BUILD_DIR)"
             echo "  -o <flag>       - pass option to the configure script (e.g. -o'--with-libatomic')"
             echo "  -c <config>     - add config file or directory for installation into /etc/nginx"
             echo "  -n              - don't run dpkg-buildpackage"
