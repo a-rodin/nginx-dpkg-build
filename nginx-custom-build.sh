@@ -107,8 +107,8 @@ sed -i -re ':a;N;$!ba;s/\n {3,}/ /g' control
 sed -i -re "/^(Conflicts|Provides):/ s/nginx-$SUFFIX([^,$]*)/nginx\1, \0/g" control
 sed -i -re "/^(Breaks|Replaces):/ s/nginx-$SUFFIX/nginx/g" control
 
-# adding original package name to the Provides section to ensure that the 
-# package will provide conventional nginx packages from the distribution
+# adding original package name to the Provides/Conflicts/Replaces sections to ensure that the 
+# packages could replace conventional nginx packages from the distribution
 while read LINE; do
     case "$LINE" in
         Package:*)
