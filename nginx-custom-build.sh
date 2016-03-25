@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Author: Alexander Rodin <rodin.alexander@gmail.com>
+# License: MIT
+
 BUILD_DIR=build
 while getopts "hp:s:r:b:o:c:n" opt; do
     case $opt in
