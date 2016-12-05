@@ -3,7 +3,6 @@
 # Author: Alexander Rodin <rodin.alexander@gmail.com>
 # License: MIT
 
-BUILD_DIR=build
 PATCHES=()
 ROOT_DIRS=()
 OPTIONS=()
@@ -17,9 +16,10 @@ while getopts "hp:s:r:b:o:c:d:n" opt; do
             echo "  -d <dist>       - specify target distribution as docker image (e.g. ubuntu:14.04)"
             echo "  -p <patch>      - add patch to the source tree"
             echo "  -r <root tree>  - add directory with root tree (containing e.g. usr and var dirs) to the package"
-            echo "  -b <build dir>  - directory for building (default is $BUILD_DIR)"
+            echo "  -b <build dir>  - directory for building (default is nginx-<suffix>)"
             echo "  -o <flag>       - pass option to the configure script (e.g. -o'--with-libatomic')"
             echo "  -c <config>     - add config file or directory for installation into /etc/nginx"
+            echo "  -k <ccache dir> - directory for ccache (default is ccache)"
             echo "  -n              - don't run dpkg-buildpackage"
             echo "  -h              - show this help"
             echo "To run the script one have to install nginx build dependencies. It could be done by running command"
@@ -46,6 +46,9 @@ while getopts "hp:s:r:b:o:c:d:n" opt; do
             ;;
         c)
             CONFIGS+=("$OPTARG")
+            ;;
+        k)
+            CCACHE_DIR="$OPTARG"
             ;;
         n)
             NO_BUILD=1
@@ -84,11 +87,12 @@ if [ "$DOCKER_IMAGE" ]; then
         DOCKER_VOLUMES+=("-v" "$PWD/$CONFIG:/mnt/$CONFIG")
         DOCKER_OPTIONS+=("-c" "/mnt/$CONFIG")
     done
+    [ "$CCACHE_DIR" ] && DOCKER_OPTIONS+=("-k" "$CCACHE_DIR")
     [ "$NO_BUILD" ] && DOCKER_OPTIONS+=("-n")
 
     # building docker image with build dependencies to avoid installing build dependencies on each run
     DOCKER_IMAGE_BUILD="nginx-dpkg-$DOCKER_IMAGE"
-    echo -e "FROM $DOCKER_IMAGE\nRUN apt-get update && apt-get build-dep -y nginx" | docker build -t "$DOCKER_IMAGE_BUILD" -
+    echo -e "FROM $DOCKER_IMAGE\nRUN apt-get update && apt-get build-dep -y nginx && apt-get install -y ccache" | docker build -t "$DOCKER_IMAGE_BUILD" -
 
     # running the script inside of a docker container and exiting
     echo docker run -i "${DOCKER_VOLUMES[@]}" "$DOCKER_IMAGE_BUILD" bash "/mnt/$0" "${DOCKER_OPTIONS[@]}"
@@ -195,6 +199,8 @@ popd
 # building the packages
 if [ ! "$NO_BUILD" ]; then
     pushd "$NGINX_DIR"
+    export CCACHE_DIR="$CCACHE_DIR"
+    export PATH="/usr/lib/ccache:$PATH"
     dpkg-buildpackage
     popd
 fi
