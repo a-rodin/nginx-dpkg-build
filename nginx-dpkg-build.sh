@@ -4,6 +4,10 @@
 # License: MIT
 
 BUILD_DIR=build
+PATCHES=()
+ROOT_DIRS=()
+OPTIONS=()
+CONFIGS=()
 while getopts "hp:s:r:b:o:c:n" opt; do
     case $opt in
         h)
@@ -25,19 +29,19 @@ while getopts "hp:s:r:b:o:c:n" opt; do
             SUFFIX="$OPTARG"
             ;;
         p)
-            PATCHES+="$OPTARG"$'\n'
+            PATCHES+=("$OPTARG")
             ;;
         r)
-            ROOT_DIRS+="$OPTARG"$'\n'
+            ROOT_DIRS+=("$OPTARG")
             ;;
         b)
             BUILD_DIR="$OPTARG"
             ;;
         o)
-            OPTIONS+="$OPTARG"$'\n'
+            OPTIONS+=("$OPTARG")
             ;;
         c)
-            CONFIGS+="$OPTARG"$'\n'
+            CONFIGS+=("$OPTARG")
             ;;
         n)
             NO_BUILD=1
@@ -62,20 +66,19 @@ NGINX_DIR="$BUILD_DIR/$(ls | head -n1)"
 popd
 
 # applying patches
-IFS=$'\n'
-for PATCH in $PATCHES; do
+for PATCH in "${PATCHES[@]}"; do
     cp "$PATCH" "$NGINX_DIR/debian/patches/$(basename $PATCH)" || exit 1
     echo $(basename $PATCH) >> "$NGINX_DIR/debian/patches/series"
 done
 
 # copying configs
-for CONFIG in $CONFIGS; do
+for CONFIG in "${CONFIGS[@]}"; do
     cp -R "$CONFIG" "$NGINX_DIR/debian/conf/" || exit 1
 done
 
 # copying additional files to to debain/root
 mkdir -p "$NGINX_DIR/debian/root"
-for ROOT_DIR in $ROOT_DIRS; do
+for ROOT_DIR in "${ROOT_DIRS[@]}"; do
     cp -R "$ROOT_DIR/"* "$NGINX_DIR/debian/root" || exit 1
 done
 # adding these additional files to the install scripts (only to scripts for the packages
@@ -144,8 +147,7 @@ done < control > control.tmp
 mv control.tmp control
 
 # adding configure options to the rules file
-IFS=$'\n'
-for OPTION in $OPTIONS; do
+for OPTION in "${OPTIONS[@]}"; do
     RULES_OPTIONS+="\n\t\t\t$OPTION \\\\"
 done
 sed -i -re "s|common_configure_flags.*$|\0$RULES_OPTIONS|" rules
