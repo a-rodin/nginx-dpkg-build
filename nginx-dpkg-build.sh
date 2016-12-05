@@ -208,6 +208,9 @@ while read LINE; do
 done < control > control.tmp
 mv control.tmp control
 
+# altering mentions of nginx-common in rules file
+sed -i -re "s|nginx-common|nginx-$SUFFIX-common|g" rules
+
 # adding configure options to the rules file
 for OPTION in "${OPTIONS[@]}"; do
     RULES_OPTIONS+="\n\t\t\t$OPTION \\\\"
