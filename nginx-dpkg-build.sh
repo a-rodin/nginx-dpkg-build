@@ -71,8 +71,8 @@ done
 [ "$DOCKER_IMAGE" ] || [ "$INSIDE_CONTAINER" ] ||
     { echo -e "Error: either -d <target distribution> or -z flag is required. Run $0 -h to view help."; exit 1; }
 
-# setting default build directory name
-[ -z "$BUILD_DIR" ] && BUILD_DIR="nginx-$SUFFIX"
+# setting default build directory name if it is not specified
+[ -z "$BUILD_DIR" ] && BUILD_DIR="nginx-$SUFFIX" && [ "$DOCKER_IMAGE" ] && BUILD_DIR=$(echo "${BUILD_DIR}_${DOCKER_IMAGE}" | tr : _)
 
 # removing trailing slash from build dir path if any
 BUILD_DIR=$(echo "$BUILD_DIR" | sed 's#/*$##')
