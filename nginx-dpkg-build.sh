@@ -7,13 +7,15 @@ PATCHES=()
 ROOT_DIRS=()
 OPTIONS=()
 CONFIGS=()
-while getopts "hp:s:r:b:o:c:d:n" opt; do
+CCACHE_DIR="ccache"
+while getopts "hp:s:r:b:o:c:d:k:zn" opt; do
     case $opt in
         h)
             echo "Usage: $0 [options]"
             echo "Options:"
             echo "  -s <suffix>     - specify suffix added to the resulting packages (required)"
-            echo "  -d <dist>       - specify target distribution as docker image (e.g. ubuntu:14.04)"
+            echo "  -d <dist>       - specify target distribution as docker image (e.g. ubuntu:14.04, required)"
+            echo "  -z              - build on the host system without docker (alternative to specifying -d)"
             echo "  -p <patch>      - add patch to the source tree"
             echo "  -r <root tree>  - add directory with root tree (containing e.g. usr and var dirs) to the package"
             echo "  -b <build dir>  - directory for building (default is nginx-<suffix>)"
@@ -53,6 +55,9 @@ while getopts "hp:s:r:b:o:c:d:n" opt; do
         n)
             NO_BUILD=1
             ;;
+        z)
+            INSIDE_CONTAINER=1
+            ;;
         ?)
             exit 1
             ;;
@@ -62,13 +67,26 @@ done
 # checking that suffix is specified
 [ "$SUFFIX" ] || { echo -e "Error: suffix is not specified. Run $0 -h to view help."; exit 1; }
 
+# checking out target distribution
+[ "$DOCKER_IMAGE" ] || [ "$INSIDE_CONTAINER" ] ||
+    { echo -e "Error: either -d <target distribution> or -z flag is required. Run $0 -h to view help."; exit 1; }
+
+# setting default build directory name
+[ -z "$BUILD_DIR" ] && BUILD_DIR="nginx-$SUFFIX"
+
+# removing trailing slash from build dir path if any
+BUILD_DIR=$(echo "$BUILD_DIR" | sed 's#/*$##')
+
 # creating build directory
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
+# creating ccache directory
+mkdir -p "$CCACHE_DIR"
+
 if [ "$DOCKER_IMAGE" ]; then
     # preparing command line arguments for docker
-    DOCKER_OPTIONS=("-s" "$SUFFIX")
+    DOCKER_OPTIONS=("-s" "$SUFFIX" "-z")
     DOCKER_VOLUMES=("-v" "$PWD/$0:/mnt/$0")
     for PATCH in "${PATCHES[@]}"; do
         DOCKER_VOLUMES+=("-v" "$PWD/$PATCH:/mnt/$PATCH")
@@ -78,7 +96,7 @@ if [ "$DOCKER_IMAGE" ]; then
         DOCKER_VOLUMES+=("-v" "$PWD/$ROOT_DIR:/mnt/$ROOT_DIR")
         DOCKER_OPTIONS+=("-p" "/mnt/$ROOT_DIR")
     done
-    DOCKER_VOLUMES+=("-v" "$PWD/$BUILD_DIR:/mnt/$BUILD_DIR")
+    DOCKER_VOLUMES+=("-v" "$PWD/$BUILD_DIR:/mnt/$BUILD_DIR-target")
     DOCKER_OPTIONS+=("-b" "/mnt/$BUILD_DIR")
     for OPTION in "${OPTIONS[@]}"; do
         DOCKER_OPTIONS+=("-o" "$OPTION")
@@ -87,7 +105,8 @@ if [ "$DOCKER_IMAGE" ]; then
         DOCKER_VOLUMES+=("-v" "$PWD/$CONFIG:/mnt/$CONFIG")
         DOCKER_OPTIONS+=("-c" "/mnt/$CONFIG")
     done
-    [ "$CCACHE_DIR" ] && DOCKER_OPTIONS+=("-k" "$CCACHE_DIR")
+    DOCKER_VOLUMES+=("-v" "$PWD/$CCACHE_DIR:/mnt/$CCACHE_DIR")
+    DOCKER_OPTIONS+=("-k" "$CCACHE_DIR")
     [ "$NO_BUILD" ] && DOCKER_OPTIONS+=("-n")
 
     # building docker image with build dependencies to avoid installing build dependencies on each run
@@ -95,8 +114,7 @@ if [ "$DOCKER_IMAGE" ]; then
     echo -e "FROM $DOCKER_IMAGE\nRUN apt-get update && apt-get build-dep -y nginx && apt-get install -y ccache" | docker build -t "$DOCKER_IMAGE_BUILD" -
 
     # running the script inside of a docker container and exiting
-    echo docker run -i "${DOCKER_VOLUMES[@]}" "$DOCKER_IMAGE_BUILD" bash "/mnt/$0" "${DOCKER_OPTIONS[@]}"
-    docker run -it "${DOCKER_VOLUMES[@]}" "$DOCKER_IMAGE_BUILD" bash && exit 0 || exit 1
+    docker run --rm -i "${DOCKER_VOLUMES[@]}" "$DOCKER_IMAGE_BUILD" bash "/mnt/$0" "${DOCKER_OPTIONS[@]}" && exit 0 || exit 1
 fi
 
 # obtaining sources
@@ -198,9 +216,12 @@ popd
 
 # building the packages
 if [ ! "$NO_BUILD" ]; then
-    pushd "$NGINX_DIR"
-    export CCACHE_DIR="$CCACHE_DIR"
+    export CCACHE_DIR="/mnt/$CCACHE_DIR"
     export PATH="/usr/lib/ccache:$PATH"
+    pushd "$NGINX_DIR"
     dpkg-buildpackage
     popd
 fi
+
+# moving built data to the mounted build dir because dpkg-buildpackage fails to handle user permissions in mounted volumes
+[ "$INSIDE_CONTAINER" ] && mv "$BUILD_DIR"/*  "$BUILD_DIR-target"
