@@ -8,12 +8,13 @@ PATCHES=()
 ROOT_DIRS=()
 OPTIONS=()
 CONFIGS=()
-while getopts "hp:s:r:b:o:c:n" opt; do
+while getopts "hp:s:r:b:o:c:d:n" opt; do
     case $opt in
         h)
             echo "Usage: $0 [options]"
             echo "Options:"
             echo "  -s <suffix>     - specify suffix added to the resulting packages (required)"
+            echo "  -d <dist>       - specify target distribution as docker image (e.g. ubuntu:14.04)"
             echo "  -p <patch>      - add patch to the source tree"
             echo "  -r <root tree>  - add directory with root tree (containing e.g. usr and var dirs) to the package"
             echo "  -b <build dir>  - directory for building (default is $BUILD_DIR)"
@@ -27,6 +28,9 @@ while getopts "hp:s:r:b:o:c:n" opt; do
             ;;
         s)
             SUFFIX="$OPTARG"
+            ;;
+        d)
+            DOCKER_IMAGE="$OPTARG"
             ;;
         p)
             PATCHES+=("$OPTARG")
@@ -55,9 +59,41 @@ done
 # checking that suffix is specified
 [ "$SUFFIX" ] || { echo -e "Error: suffix is not specified. Run $0 -h to view help."; exit 1; }
 
-# creating directory for building
+# creating build directory
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
+
+if [ "$DOCKER_IMAGE" ]; then
+    # preparing command line arguments for docker
+    DOCKER_OPTIONS=("-s" "$SUFFIX")
+    DOCKER_VOLUMES=("-v" "$PWD/$0:/mnt/$0")
+    for PATCH in "${PATCHES[@]}"; do
+        DOCKER_VOLUMES+=("-v" "$PWD/$PATCH:/mnt/$PATCH")
+        DOCKER_OPTIONS+=("-p" "/mnt/$PATCH")
+    done
+    for ROOT_DIR in "${ROOT_DIRS[@]}"; do
+        DOCKER_VOLUMES+=("-v" "$PWD/$ROOT_DIR:/mnt/$ROOT_DIR")
+        DOCKER_OPTIONS+=("-p" "/mnt/$ROOT_DIR")
+    done
+    DOCKER_VOLUMES+=("-v" "$PWD/$BUILD_DIR:/mnt/$BUILD_DIR")
+    DOCKER_OPTIONS+=("-b" "/mnt/$BUILD_DIR")
+    for OPTION in "${OPTIONS[@]}"; do
+        DOCKER_OPTIONS+=("-o" "$OPTION")
+    done
+    for CONFIG in "${CONFIGS[@]}"; do
+        DOCKER_VOLUMES+=("-v" "$PWD/$CONFIG:/mnt/$CONFIG")
+        DOCKER_OPTIONS+=("-c" "/mnt/$CONFIG")
+    done
+    [ "$NO_BUILD" ] && DOCKER_OPTIONS+=("-n")
+
+    # building docker image with build dependencies to avoid installing build dependencies on each run
+    DOCKER_IMAGE_BUILD="nginx-dpkg-$DOCKER_IMAGE"
+    echo -e "FROM $DOCKER_IMAGE\nRUN apt-get update && apt-get build-dep -y nginx" | docker build -t "$DOCKER_IMAGE_BUILD" -
+
+    # running the script inside of a docker container and exiting
+    echo docker run -i "${DOCKER_VOLUMES[@]}" "$DOCKER_IMAGE_BUILD" bash "/mnt/$0" "${DOCKER_OPTIONS[@]}"
+    docker run -it "${DOCKER_VOLUMES[@]}" "$DOCKER_IMAGE_BUILD" bash && exit 0 || exit 1
+fi
 
 # obtaining sources
 pushd "$BUILD_DIR"
@@ -98,6 +134,7 @@ popd
 # adding suffixes to the scripts names
 pushd "$NGINX_DIR/debian"
 for FILE in $(ls | grep nginx-); do
+    echo $FILE
     mv $FILE $(echo $FILE | sed "s/^nginx-/nginx-$SUFFIX-/g")
 done
 
@@ -115,6 +152,7 @@ sed -i -re "/^(Breaks|Replaces):/ s/nginx-$SUFFIX/nginx/g" control
 
 # adding original package name to the Provides/Conflicts/Replaces sections to ensure that the 
 # packages could replace conventional nginx packages from the distribution
+IFS=$'\n'
 while read LINE; do
     case "$LINE" in
         Package:*)
