@@ -109,7 +109,11 @@ if [ "$DOCKER_IMAGE" ]; then
 
     # building docker image with build dependencies to avoid installing build dependencies on each run
     DOCKER_IMAGE_BUILD="nginx-dpkg-$DOCKER_IMAGE"
-    echo -e "FROM $DOCKER_IMAGE\nRUN apt-get update && apt-get build-dep -y nginx && apt-get install -y ccache" | docker build -t "$DOCKER_IMAGE_BUILD" -
+    docker build -t "$DOCKER_IMAGE_BUILD" - << EOF
+        FROM $DOCKER_IMAGE
+        RUN sed -i 's/^deb \(.*\)/deb \1\ndeb-src \1/g' /etc/apt/sources.list
+        RUN apt-get update && apt-get build-dep -y nginx && apt-get install -y ccache
+EOF
 
     # running the script inside of a docker container and exiting
     docker run --rm -i "${DOCKER_VOLUMES[@]}" "$DOCKER_IMAGE_BUILD" bash "/mnt/$0" "${DOCKER_OPTIONS[@]}" && exit 0 || exit 1
