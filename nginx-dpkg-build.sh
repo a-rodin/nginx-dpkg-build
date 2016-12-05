@@ -24,8 +24,6 @@ while getopts "hp:s:r:b:o:c:d:k:zn" opt; do
             echo "  -k <ccache dir> - directory for ccache (default is ccache)"
             echo "  -n              - don't run dpkg-buildpackage"
             echo "  -h              - show this help"
-            echo "To run the script one have to install nginx build dependencies. It could be done by running command"
-            echo "  sudo apt-get install build-dep nginx"
             exit 1
             ;;
         s)
