@@ -8,7 +8,8 @@ ROOT_DIRS=()
 OPTIONS=()
 CONFIGS=()
 CCACHE_DIR="ccache"
-while getopts "hp:s:r:b:o:c:d:k:zn" opt; do
+MAINTAINER="nginx-dpkg-build <nginx-dpkg-build@github.com>"
+while getopts "hp:s:r:b:o:c:d:k:m:zn" opt; do
     case $opt in
         h)
             echo "Usage: $0 [options]"
@@ -22,6 +23,7 @@ while getopts "hp:s:r:b:o:c:d:k:zn" opt; do
             echo "  -o <flag>       - pass option to the configure script (e.g. -o'--with-libatomic')"
             echo "  -c <config>     - add config file or directory for installation into /etc/nginx"
             echo "  -k <ccache dir> - directory for ccache (default is ccache)"
+            echo "  -m <maintainer> - set maintainer name (default is 'nginx-dpkg-build <nginx-dpkg-build@github.com>')"
             echo "  -n              - don't run dpkg-buildpackage"
             echo "  -h              - show this help"
             exit 1
@@ -49,6 +51,9 @@ while getopts "hp:s:r:b:o:c:d:k:zn" opt; do
             ;;
         k)
             CCACHE_DIR="$OPTARG"
+            ;;
+        m)
+            MAINTAINER="$OPTARG"
             ;;
         n)
             NO_BUILD=1
@@ -105,6 +110,7 @@ if [ "$DOCKER_IMAGE" ]; then
     done
     DOCKER_VOLUMES+=("-v" "$PWD/$CCACHE_DIR:/mnt/$CCACHE_DIR")
     DOCKER_OPTIONS+=("-k" "$CCACHE_DIR")
+    DOCKER_OPTIONS+=("-m" "$MAINTAINER")
     [ "$NO_BUILD" ] && DOCKER_OPTIONS+=("-n")
 
     # building docker image with build dependencies to avoid installing build dependencies on each run
@@ -217,6 +223,19 @@ for OPTION in "${OPTIONS[@]}"; do
     RULES_OPTIONS+="\n\t\t\t$OPTION \\\\"
 done
 sed -i -re "s|common_configure_flags.*$|\0$RULES_OPTIONS|" rules
+
+# adding entry about modifications to the changelog
+cat > changelog.tmp << EOF
+$(head -n1 changelog | sed 's/)/~'$SUFFIX')/')
+
+  * Build nginx-$SUFFIX packages.
+
+ -- $MAINTAINER  $(date --rfc-822)
+
+$(cat changelog)
+
+EOF
+mv changelog.tmp changelog
 
 popd
 

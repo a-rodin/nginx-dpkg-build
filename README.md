@@ -48,6 +48,7 @@ Alternatively, if you don't want to use Docker, you could specify `-z` flag inst
 | `-r <root dir>` | add directory with root dir hierarchy to the package  | `-r ./root-dir` |
 | `-o <flag>` | pass option to the configure script | `-o '--with-libatomic'` |
 | `-c <config>` | add config file or directory for installation to /etc/nginx  | `-c nginx.conf` |
-| `-k <ccache dir>` | directory for ccache  | `-k $HOME/.ccache` |
+| `-k <dir>` | directory for ccache  | `-k $HOME/.ccache` |
+| `-m <name>` | maintainer name and email for package changelog | `-m "Name <name@domain.com>"` |
 | `-n` | don't run dpkg-buildpackage | |
 | `-h` | show help | |
