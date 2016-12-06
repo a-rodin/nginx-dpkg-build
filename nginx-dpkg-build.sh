@@ -63,11 +63,11 @@ while getopts "hp:s:r:b:o:c:d:k:zn" opt; do
 done
 
 # checking that suffix is specified
-[ "$SUFFIX" ] || { echo -e "Error: suffix is not specified. Run $0 -h to view help."; exit 1; }
+[ "$SUFFIX" ] || { echo -e "Error: suffix is not specified.\nRun $0 -h to get help."; exit 1; }
 
 # checking out target distribution
 [ "$DOCKER_IMAGE" ] || [ "$INSIDE_CONTAINER" ] ||
-    { echo -e "Error: either -d <target distribution> or -z flag is required. Run $0 -h to view help."; exit 1; }
+    { echo -e "Error: either -d <target distribution> or -z flag is required.\nRun $0 -h to get help."; exit 1; }
 
 # setting default build directory name if it is not specified
 [ -z "$BUILD_DIR" ] && BUILD_DIR="nginx-$SUFFIX" && [ "$DOCKER_IMAGE" ] && BUILD_DIR=$(echo "${BUILD_DIR}_${DOCKER_IMAGE}" | tr : _)
