@@ -147,7 +147,7 @@ if [ "$DOCKER_IMAGE" ]; then
     (docker build -t "$DOCKER_IMAGE_BUILD" - << EOF
         FROM $DOCKER_IMAGE
         RUN sed -i 's/^deb \(.*\)/deb \1\ndeb-src \1/g' /etc/apt/sources.list
-        RUN apt-get update && apt-get build-dep -y nginx && apt-get install -y ccache
+        RUN apt-get update && apt-get build-dep -y nginx && apt-get install -y debian-keyring ccache
         RUN apt-get install -y ${DEPS_STRIPPED[@]} ${BUILD_DEPS_STRIPPED[@]}
 EOF
     ) || { echo "Error: unable to build docker image"; exit 1; }
