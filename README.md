@@ -61,13 +61,13 @@ Alternatively, if you don't want to use Docker, you could specify `-z` flag inst
 ### Adding PostgreSQL module
 ```bash
 git clone https://github.com/FRiCKLE/ngx_postgres.git
-./nginx-dpkg-build.sh -s postgres -u debian:jessie \
+./nginx-dpkg-build.sh -s postgres -d debian:jessie \
     -a postgresql-common -u postgresql-server-dev-all -m ngx_postgres
 ```
 
 ### Adding libatomic support
 ```bash
-./nginx-dpkg-build.sh -s atomic -u ubuntu:14.04 \
+./nginx-dpkg-build.sh -s atomic -d ubuntu:14.04 \
     -a libatomic1 -u 'libatomic-ops-dev (>= 7.3)' -o '--with-libatomic'
 ```
 
