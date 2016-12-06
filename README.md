@@ -62,7 +62,7 @@ Alternatively, if you don't want to use Docker, you could specify `-z` flag inst
 ```bash
 git clone https://github.com/FRiCKLE/ngx_postgres.git
 ./nginx-dpkg-build.sh -s postgres -u debian:jessie \
-    -a postgresql-common -u postgresql-server-dev-all -m 'ngx_postgres'
+    -a postgresql-common -u postgresql-server-dev-all -m ngx_postgres
 ```
 
 ### Adding libatomic support
