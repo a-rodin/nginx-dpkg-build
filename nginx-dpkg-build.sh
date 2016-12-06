@@ -27,7 +27,7 @@ while getopts "hp:s:r:b:o:c:d:k:m:a:i:zn-:" opt; do
             echo "  -a <package>    - require runtime dependency (e.g. libatomic1)"
             echo "  -i <package>    - require buildtime dependency (e.g. libatomic-ops-dev)"
             echo "  -k <ccache dir> - directory for ccache (default is ccache)"
-            echo "  -m <maintainer> - set maintainer name (default is 'nginx-dpkg-build <nginx-dpkg-build@github.com>')"
+            echo "  -i <identity>   - set maintainer name and email (default is 'nginx-dpkg-build <nginx-dpkg-build@github.com>')"
             echo "  -n              - don't run dpkg-buildpackage"
             echo "  -h              - show this help"
             exit 1
@@ -62,7 +62,7 @@ while getopts "hp:s:r:b:o:c:d:k:m:a:i:zn-:" opt; do
         k)
             CCACHE_DIR="$OPTARG"
             ;;
-        m)
+        i)
             MAINTAINER="$OPTARG"
             ;;
         n)
@@ -130,7 +130,7 @@ if [ "$DOCKER_IMAGE" ]; then
     done
     DOCKER_VOLUMES+=("-v" "$PWD/$CCACHE_DIR:/mnt/$CCACHE_DIR")
     DOCKER_OPTIONS+=("-k" "$CCACHE_DIR")
-    DOCKER_OPTIONS+=("-m" "$MAINTAINER")
+    DOCKER_OPTIONS+=("-i" "$MAINTAINER")
     [ "$NO_BUILD" ] && DOCKER_OPTIONS+=("-n")
 
     # building docker image with build dependencies to avoid installing build dependencies on each run

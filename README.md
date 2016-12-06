@@ -49,6 +49,6 @@ Alternatively, if you don't want to use Docker, you could specify `-z` flag inst
 | `-o <flag>` | pass option to the configure script | `-o '--with-libatomic'` |
 | `-c <config>` | add config file or directory for installation to /etc/nginx  | `-c nginx.conf` |
 | `-k <dir>` | directory for ccache  | `-k $HOME/.ccache` |
-| `-m <name>` | maintainer name and email for package changelog | `-m "Name <name@domain.com>"` |
+| `-i <name>` | maintainer's name and email for package changelog | `-m "Name <name@domain.com>"` |
 | `-n` | don't run dpkg-buildpackage | |
 | `-h` | show help | |
