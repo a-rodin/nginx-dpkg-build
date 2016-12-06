@@ -49,8 +49,8 @@ Alternatively, if you don't want to use Docker, you could specify `-z` flag inst
 | `-o <flag>` | pass option to the configure script | `-o '--with-libatomic'` |
 | `-c <config>` | add config file or directory for installation to /etc/nginx  | `-c nginx.conf` |
 | `-m <module>` | add module's directory to compile it into nginx | `-m ./ngx_postgres/` |
-| `-a <package>` | add dependency to the compiled package | `-a libatomic1` |
-| `-u <package>` | add build dependency | `-u 'libatomic-ops-dev (>= 7.3)'` |
+| `-a <package>` | add dependency to the compiled package | `-a 'libatomic1 (>= 4.9)'` |
+| `-u <package>` | add build dependency | `-u libatomic-ops-dev` |
 | `-k <dir>` | directory for ccache  | `-k $HOME/.ccache` |
 | `-i <name>` | maintainer's name and email for package changelog | `-i 'Name <name@domain.com>'` |
 | `-n` | don't run dpkg-buildpackage | |
