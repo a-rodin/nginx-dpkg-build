@@ -7,9 +7,11 @@ PATCHES=()
 ROOT_DIRS=()
 OPTIONS=()
 CONFIGS=()
+DEPS=()
+BUILD_DEPS=()
 CCACHE_DIR="ccache"
 MAINTAINER="nginx-dpkg-build <nginx-dpkg-build@github.com>"
-while getopts "hp:s:r:b:o:c:d:k:m:zn" opt; do
+while getopts "hp:s:r:b:o:c:d:k:m:a:i:zn" opt; do
     case $opt in
         h)
             echo "Usage: $0 [options]"
@@ -22,6 +24,8 @@ while getopts "hp:s:r:b:o:c:d:k:m:zn" opt; do
             echo "  -b <build dir>  - directory for building (default is nginx-<suffix>)"
             echo "  -o <flag>       - pass option to the configure script (e.g. -o'--with-libatomic')"
             echo "  -c <config>     - add config file or directory for installation into /etc/nginx"
+            echo "  -a <package>    - require runtime dependency (e.g. libatomic1)"
+            echo "  -i <package>    - require buildtime dependency (e.g. libatomic-ops-dev)"
             echo "  -k <ccache dir> - directory for ccache (default is ccache)"
             echo "  -m <maintainer> - set maintainer name (default is 'nginx-dpkg-build <nginx-dpkg-build@github.com>')"
             echo "  -n              - don't run dpkg-buildpackage"
@@ -48,6 +52,12 @@ while getopts "hp:s:r:b:o:c:d:k:m:zn" opt; do
             ;;
         c)
             CONFIGS+=("$OPTARG")
+            ;;
+        a)
+            DEPS+=("$OPTARG")
+            ;;
+        i)
+            BUILD_DEPS+=("$OPTARG")
             ;;
         k)
             CCACHE_DIR="$OPTARG"
@@ -91,6 +101,8 @@ if [ "$DOCKER_IMAGE" ]; then
     # preparing command line arguments for docker
     DOCKER_OPTIONS=("-s" "$SUFFIX" "-z")
     DOCKER_VOLUMES=("-v" "$PWD/$0:/mnt/$0")
+    DEPS_STRIPPED=()
+    BUILD_DEPS_STRIPPED=()
     for PATCH in "${PATCHES[@]}"; do
         DOCKER_VOLUMES+=("-v" "$PWD/$PATCH:/mnt/$PATCH")
         DOCKER_OPTIONS+=("-p" "/mnt/$PATCH")
@@ -108,6 +120,14 @@ if [ "$DOCKER_IMAGE" ]; then
         DOCKER_VOLUMES+=("-v" "$PWD/$CONFIG:/mnt/$CONFIG")
         DOCKER_OPTIONS+=("-c" "/mnt/$CONFIG")
     done
+    for DEP in "${DEPS[@]}"; do
+        DOCKER_OPTIONS+=("-a" "$DEP")
+        DEPS_STRIPPED+=($(echo "$DEP" | sed 's/ .*$//'))
+    done
+    for BUILD_DEP in "${BUILD_DEPS[@]}"; do
+        DOCKER_OPTIONS+=("-i" "$BUILD_DEP")
+        BUILD_DEPS_STRIPPED+=($(echo "$BUILD_DEP" | sed 's/ .*$//'))
+    done
     DOCKER_VOLUMES+=("-v" "$PWD/$CCACHE_DIR:/mnt/$CCACHE_DIR")
     DOCKER_OPTIONS+=("-k" "$CCACHE_DIR")
     DOCKER_OPTIONS+=("-m" "$MAINTAINER")
@@ -119,6 +139,7 @@ if [ "$DOCKER_IMAGE" ]; then
         FROM $DOCKER_IMAGE
         RUN sed -i 's/^deb \(.*\)/deb \1\ndeb-src \1/g' /etc/apt/sources.list
         RUN apt-get update && apt-get build-dep -y nginx && apt-get install -y ccache
+        RUN apt-get install -y ${DEPS_STRIPPED[@]} ${BUILD_DEPS_STRIPPED[@]}
 EOF
     ) || { echo "Error: unable to build docker image"; exit 1; }
 
@@ -209,6 +230,16 @@ while read LINE; do
             [ "$HAS_PROVIDES" ] || echo "Provides: $PACKAGE"
             [ "$HAS_CONFLICTS" ] || echo "Conflicts: $PACKAGE"
             [ "$HAS_REPLACES" ] || echo "Replaces: $PACKAGE"
+            ;;
+        Build-Depends:*)
+            for BUILD_DEP in "${BUILD_DEPS[@]}"; do
+                LINE="$LINE, $BUILD_DEP"
+            done
+            ;;
+        Depends:*)
+            (echo "$PACKAGE" | egrep -qv "(doc|dbg)$") && for DEP in "${DEPS[@]}"; do
+                LINE="$LINE, $DEP"
+            done
             ;;
     esac
     echo "$LINE"
