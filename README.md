@@ -49,7 +49,7 @@ Alternatively, if you don't want to use Docker, you could specify `-z` flag inst
 | `-o <flag>` | pass option to the configure script | `-o '--with-libatomic'` |
 | `-c <config>` | add config file or directory for installation to /etc/nginx  | `-c nginx.conf` |
 | `-m <module>` | add module's directory to compile it into nginx | `-m ./ngx_postgres/` |
-| `-a <package>` | add dependency to the compiled package | `-a 'libatomic1 (>= 4.9)'` |
+| `-a <package>` | add dependency to the compiled package | `-a 'libatomic1 (>=4.9)'` |
 | `-u <package>` | add build dependency | `-u libatomic-ops-dev` |
 | `-k <dir>` | directory for ccache  | `-k $HOME/.ccache` |
 | `-i <name>` | maintainer's name and email for package changelog | `-i 'Name <name@domain.com>'` |
@@ -68,7 +68,7 @@ git clone https://github.com/FRiCKLE/ngx_postgres.git
 ### Adding libatomic support
 ```bash
 ./nginx-dpkg-build.sh -s atomic -d ubuntu:14.04 \
-    -a libatomic1 -u 'libatomic-ops-dev (>= 7.3)' -o '--with-libatomic'
+    -a libatomic1 -u 'libatomic-ops-dev (>=7.3)' -o '--with-libatomic'
 ```
 
 ### Publishing packages to PPA
