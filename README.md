@@ -10,7 +10,7 @@ The key features:
 
 ## Dependencies
 
-To run the script one should have either:
+To run the script you should have either:
 * Bash and Docker on any POSIX-compatible system;
 * or Ubuntu/Debian system, same as the target one, with build dependencies installed by
 
@@ -43,9 +43,9 @@ Alternatively, if you don't want to use Docker, you could specify `-z` flag inst
 | `-s <suffix>` | specify suffix added to the resulting packages (required) | `-s mysuffix` |
 | `-d <dist>` | specify target distribution as a docker tag ([ubuntu](https://hub.docker.com/_/ubuntu/), [debian](https://hub.docker.com/_/debian/)) |  `-d debian:jessie` |
 | `-z` | build on the host system without docker | |
-| `-b <build dir>` | specify build directory (default is `nginx-{suffix}_{dist}` | `-b ./build-dir` |
+| `-b <dir>` | specify build directory (default is `nginx-{suffix}_{dist}` | `-b ./build-dir` |
 | `-p <patch>` | add patch to the source tree | `-p ./patch1.patch` |
-| `-r <root dir>` | add directory with root dir hierarchy to the package  | `-r ./root-dir` |
+| `-r <dir>` | copy files from the directory to the package's root dir | `-r ./root-dir` |
 | `-o <flag>` | pass option to the configure script | `-o '--with-libatomic'` |
 | `-c <config>` | add config file or directory for installation to /etc/nginx  | `-c nginx.conf` |
 | `-m <module>` | add module's directory to compile it into nginx | `-m ./ngx_postgres/` |
@@ -53,5 +53,34 @@ Alternatively, if you don't want to use Docker, you could specify `-z` flag inst
 | `-u <package>` | add build dependency | `-u libatomic-ops-dev (>= 7.3)` |
 | `-k <dir>` | directory for ccache  | `-k $HOME/.ccache` |
 | `-i <name>` | maintainer's name and email for package changelog | `-i "Name <name@domain.com>"` |
-| `-n` | don't run dpkg-buildpackage, just produce ready for build sources | |
+| `-n` | don't run dpkg-buildpackage | |
 | `-h` | show help | |
+
+## Examples
+
+### Adding PostgreSQL module
+```bash
+git clone https://github.com/FRiCKLE/ngx_postgres.git
+./nginx-dpkg-build.sh -s postgres -u debian:jessie \
+    -a postgresql-common -u postgresql-server-dev-all -m `ngx_postgres`
+```
+
+### Adding libatomic support
+```bash
+./nginx-dpkg-build.sh -s atomic -u ubuntu:14.04 \
+    -a libatomic1 -u 'libatomic-ops-dev (>= 7.3)' -o '--with-libatomic'
+```
+
+### Publishing packages to PPA
+This example assumes that you have a [launchpad](https://launchpad.net/) account and created a PPA repository.
+
+You could build package as described previously, but should specify your name and email to be included to
+the package:
+
+```bash
+./nginx-dpkg-build.sh -s mysuffix -i "My Name <my@email.com>" -d ubuntu:16.04
+```
+
+Then you could navigate to the build directory `nginx-mysuffix_ubuntu_16.04` and upload the changes to PPA
+as described in the [upload instructions](https://help.launchpad.net/Packaging/PPA/Uploading). Note that you need to
+have your GPG public key uploaded to launchpad in order to upload packages to PPA.
