@@ -11,7 +11,7 @@ DEPS=()
 BUILD_DEPS=()
 CCACHE_DIR="ccache"
 MAINTAINER="nginx-dpkg-build <nginx-dpkg-build@github.com>"
-while getopts "hp:s:r:b:o:c:d:k:m:a:i:zn" opt; do
+while getopts "hp:s:r:b:o:c:d:k:m:a:i:zn-:" opt; do
     case $opt in
         h)
             echo "Usage: $0 [options]"
@@ -280,4 +280,4 @@ if [ ! "$NO_BUILD" ]; then
 fi
 
 # moving built data to the mounted build dir because dpkg-buildpackage fails to handle user permissions in mounted volumes
-[ "$INSIDE_CONTAINER" ] && mv "$BUILD_DIR"/*  "$BUILD_DIR-target"
+[ "$INSIDE_CONTAINER" ] && [ -d "$BUILD_DIR-target" && mv "$BUILD_DIR"/*  "$BUILD_DIR-target"
