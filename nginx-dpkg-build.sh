@@ -7,11 +7,12 @@ PATCHES=()
 ROOT_DIRS=()
 OPTIONS=()
 CONFIGS=()
+MODULES=()
 DEPS=()
 BUILD_DEPS=()
 CCACHE_DIR="ccache"
 MAINTAINER="nginx-dpkg-build <nginx-dpkg-build@github.com>"
-while getopts "hp:s:r:b:o:c:d:k:m:a:i:zn-:" opt; do
+while getopts "hp:s:r:b:o:c:d:k:m:a:u:i:zn-:" opt; do
     case $opt in
         h)
             echo "Usage: $0 [options]"
@@ -24,8 +25,9 @@ while getopts "hp:s:r:b:o:c:d:k:m:a:i:zn-:" opt; do
             echo "  -r <root tree>  - add directory with root tree (containing e.g. usr and var dirs) to the package"
             echo "  -o <flag>       - pass option to the configure script (e.g. -o'--with-libatomic')"
             echo "  -c <config>     - add config file or directory for installation into /etc/nginx"
+            echo "  -m <module dir> - add external module to be compiled into nginx"
             echo "  -a <package>    - require runtime dependency (e.g. libatomic1)"
-            echo "  -i <package>    - require buildtime dependency (e.g. libatomic-ops-dev)"
+            echo "  -u <package>    - require buildtime dependency (e.g. libatomic-ops-dev)"
             echo "  -k <ccache dir> - directory for ccache (default is ccache)"
             echo "  -i <identity>   - set maintainer name and email (default is 'nginx-dpkg-build <nginx-dpkg-build@github.com>')"
             echo "  -n              - don't run dpkg-buildpackage"
@@ -53,10 +55,13 @@ while getopts "hp:s:r:b:o:c:d:k:m:a:i:zn-:" opt; do
         c)
             CONFIGS+=("$OPTARG")
             ;;
+        m)
+            MODULES+=("$OPTARG")
+            ;;
         a)
             DEPS+=("$OPTARG")
             ;;
-        i)
+        u)
             BUILD_DEPS+=("$OPTARG")
             ;;
         k)
@@ -120,12 +125,16 @@ if [ "$DOCKER_IMAGE" ]; then
         DOCKER_VOLUMES+=("-v" "$PWD/$CONFIG:/mnt/$CONFIG")
         DOCKER_OPTIONS+=("-c" "/mnt/$CONFIG")
     done
+    for MODULE in "${MODULES[@]}"; do
+        DOCKER_VOLUMES+=("-v" "$PWD/$MODULE:/mnt/$MODULE")
+        DOCKER_OPTIONS+=("-m" "/mnt/$MODULE")
+    done
     for DEP in "${DEPS[@]}"; do
         DOCKER_OPTIONS+=("-a" "$DEP")
         DEPS_STRIPPED+=($(echo "$DEP" | sed 's/ .*$//'))
     done
     for BUILD_DEP in "${BUILD_DEPS[@]}"; do
-        DOCKER_OPTIONS+=("-i" "$BUILD_DEP")
+        DOCKER_OPTIONS+=("-u" "$BUILD_DEP")
         BUILD_DEPS_STRIPPED+=($(echo "$BUILD_DEP" | sed 's/ .*$//'))
     done
     DOCKER_VOLUMES+=("-v" "$PWD/$CCACHE_DIR:/mnt/$CCACHE_DIR")
@@ -143,8 +152,10 @@ if [ "$DOCKER_IMAGE" ]; then
 EOF
     ) || { echo "Error: unable to build docker image"; exit 1; }
 
+    # determining whether the script is run from an interactive shell or not
+    TTY_FLAG=$([ -t 0 ] && echo "-t")
     # running the script inside of a docker container and exiting
-    docker run --rm -i "${DOCKER_VOLUMES[@]}" "$DOCKER_IMAGE_BUILD" bash "/mnt/$0" "${DOCKER_OPTIONS[@]}" && exit 0 || exit 1
+    docker run --rm -i $TTY_FLAG $"${DOCKER_VOLUMES[@]}" "$DOCKER_IMAGE_BUILD" bash "/mnt/$0" "${DOCKER_OPTIONS[@]}" && exit 0 || exit 1
 fi
 
 # obtaining sources
@@ -162,6 +173,16 @@ done
 # copying configs
 for CONFIG in "${CONFIGS[@]}"; do
     cp -R "$CONFIG" "$NGINX_DIR/debian/conf/" || exit 1
+done
+
+# adding modules
+MODULES_DIR="$NGINX_DIR/debian/modules"
+for MODULE in "${MODULES[@]}"; do
+    MODULE_NAME=$(basename "$MODULE")
+    # removing module if already exist
+    [ -d "$MODULES_DIR/$MODULE_NAME" ] && rm -rf "$MODULES_DIR/$MODULE_NAME"
+    # copying the provided module to modules directory
+    cp -R "$MODULE" "$MODULES_DIR/$MODULE_NAME"
 done
 
 # copying additional files to to debain/root
@@ -280,4 +301,4 @@ if [ ! "$NO_BUILD" ]; then
 fi
 
 # moving built data to the mounted build dir because dpkg-buildpackage fails to handle user permissions in mounted volumes
-[ "$INSIDE_CONTAINER" ] && [ -d "$BUILD_DIR-target" && mv "$BUILD_DIR"/*  "$BUILD_DIR-target"
+[ "$INSIDE_CONTAINER" ] && [ -d "$BUILD_DIR-target" ] && mv "$BUILD_DIR"/*  "$BUILD_DIR-target"
