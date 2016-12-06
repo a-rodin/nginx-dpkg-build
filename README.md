@@ -1,6 +1,6 @@
 # nginx-dpkg-build
 
-It is a script that simplifies making custom builds of [NGINX](https://nginx.org/en/) web server for Debian and Ubuntu systems. The earlier version was hosted [here](https://gist.github.com/a-rodin/8406815dd05f39f10418).
+This script simplifies making custom builds of [NGINX](https://nginx.org/en/) web server for Debian and Ubuntu systems. Earlier versions were published [here](https://gist.github.com/a-rodin/8406815dd05f39f10418).
 
 The key features:
 * Support for custom patches, configs, build flags, and arbitrary files in the target filesystem.
