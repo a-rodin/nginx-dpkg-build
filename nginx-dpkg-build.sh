@@ -296,7 +296,7 @@ if [ ! "$NO_BUILD" ]; then
     export CCACHE_DIR="/mnt/$CCACHE_DIR"
     export PATH="/usr/lib/ccache:$PATH"
     pushd "$NGINX_DIR"
-    dpkg-buildpackage
+    dpkg-buildpackage -b -us -uc
     popd
 fi
 
